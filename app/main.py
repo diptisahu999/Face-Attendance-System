@@ -59,6 +59,17 @@ def make_response(status, code, flag, message, data=None):
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+
+
+@app.get("/test", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index1.html", {"request": request})
+
+@app.get("/employee_upload/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
 @app.get("/hi")
 def read_hi():
     return "TechV1z0r !"
