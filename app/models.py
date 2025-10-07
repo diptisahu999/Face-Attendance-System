@@ -3,6 +3,12 @@
 from sqlalchemy import Column, String, LargeBinary, Integer, DateTime
 from .db import Base
 from datetime import datetime
+import pytz
+
+def current_time_ist():
+    """Return current datetime in IST (naive, no timezone info)."""
+    ist_tz = pytz.timezone('Asia/Kolkata')
+    return datetime.now(ist_tz).replace(tzinfo=None)
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -20,5 +26,5 @@ class RecognitionLog(Base):
     employee_id = Column(String)
     name = Column(String)
     member_code = Column(String)
-    recognized_at = Column(DateTime, default=datetime.utcnow)
+    recognized_at = Column(DateTime, default=current_time_ist)
     source = Column(String, default="live_recognize_api")
