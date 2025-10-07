@@ -128,6 +128,11 @@ async def upload_images(
         logging.error(f"Error during upload: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save images to database.")
 
+recent_recognitions = {}
+RECOGNITION_COOLDOWN = 60  # seconds
+
+
+
 @app.post("/recognize", response_model=schemas.RecognitionResponse)
 async def recognize(background_tasks: BackgroundTasks, # Add this
     file: UploadFile = File(...), 
@@ -163,14 +168,27 @@ async def recognize(background_tasks: BackgroundTasks, # Add this
                     idx = names.index(best_face["name"])
                     emp_id_to_log = ids[idx]
                     member_code_to_log = member_codes[idx]
-                    
-                    background_tasks.add_task(
-                        crud.create_recognition_log,
-                        db=db,
-                        emp_id=emp_id_to_log,
-                        name=best_face["name"],
-                        member_code=member_code_to_log
-                    )
+
+                    # --- Cooldown logic: avoid multiple inserts for same person ---
+                    now = time.time()
+                    last_time = recent_recognitions.get(emp_id_to_log, 0)
+
+                    if now - last_time > RECOGNITION_COOLDOWN:
+                        # Update timestamp and insert record
+                        recent_recognitions[emp_id_to_log] = now
+
+                        await crud.create_recognition_log(
+                            db=db,
+                            emp_id=emp_id_to_log,
+                            name=best_face["name"],
+                            member_code=member_code_to_log
+                        )
+                        logging.info(f"✅ Recognition logged for {best_face['name']}")
+                    else:
+                        logging.info(
+                            f"⚠️ Skipped duplicate recognition for {best_face['name']} (within {RECOGNITION_COOLDOWN}s)"
+                        )
+                        
                 except Exception as log_error:
                     logging.error(f"Failed to save recognition log: {log_error}")
         
